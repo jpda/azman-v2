@@ -7,6 +7,11 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Azure.Identity;
+using Azure.ResourceManager.Resources;
+using Azure.ResourceManager.Resources.Models;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace azman_v2
 {
@@ -15,7 +20,6 @@ namespace azman_v2
         [FunctionName("OnResourceGroupCreate")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-
             [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainQueueConnection")] IAsyncCollector<TaggingRequestModel> outboundQueue,
             ILogger log)
         {
@@ -45,6 +49,40 @@ namespace azman_v2
 
             // ready to do work
             return new OkObjectResult(new { });
+        }
+
+        [FunctionName("TagResourceGroup")]
+        public static async Task TagResourceGroup(
+            [QueueTrigger("%ResourceGroupCreatedQueueName%", Connection = "MainQueueConnection")] TaggingRequestModel request
+        )
+        {
+            // connect to azure
+            var resourceManagerClient = new ResourcesManagementClient(request.SubscriptionId, new DefaultAzureCredential());
+            var resourceGroupRequest = await resourceManagerClient.ResourceGroups.GetAsync(request.ResourceGroupName);
+
+            if (resourceGroupRequest == null) return;
+            var resourceGroup = resourceGroupRequest.Value;
+
+            // todo: move this to configuration
+            var newDate = request.DateCreated.AddDays(30).Date;
+
+            var ourTags = new Dictionary<string, string>();
+            ourTags.Union(resourceGroup.Tags);
+
+            resourceGroup.Tags.TryAdd("expires", newDate.ToString("YYYY-MM-dd"));
+            resourceGroup.Tags.TryAdd("tagged-by", "thrazman");
+            resourceGroup.Tags.TryAdd("owner", request.CreatedByUser);
+
+            // service-msft-prod-azman-main-compute
+            var groupNamePieces = resourceGroup.Name.Split('-');
+            if (groupNamePieces.Count() >= 3)
+            {
+                resourceGroup.Tags.TryAdd("function", groupNamePieces[0]); // service
+                resourceGroup.Tags.TryAdd("customer", groupNamePieces[1]); // msft
+                resourceGroup.Tags.TryAdd("env", groupNamePieces[2]); // prod
+                resourceGroup.Tags.TryAdd("project", string.Join('-', groupNamePieces.Skip(3))); //azman-main-compute
+            }
+            await resourceManagerClient.ResourceGroups.CreateOrUpdateAsync(resourceGroup.Name, resourceGroup);
         }
     }
 }
