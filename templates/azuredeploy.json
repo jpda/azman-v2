@@ -1,0 +1,150 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "functionName": {
+            "type": "string"
+        },
+        "functionASPName": {
+            "type": "string"
+        },
+        "alwaysOn": {
+            "defaultValue": true,
+            "type": "bool"
+        },
+        "use32BitWorkerProcess": {
+            "defaultValue": true,
+            "type": "bool"
+        },
+        "sku": {
+            "defaultValue": "Standard",
+            "type": "string"
+        },
+        "AppServicePlanskuCode": {
+            "defaultValue": "S1",
+            "type": "string"
+        }
+    },
+    "variables": {
+        "functionStorageAccountName": "[concat(parameters('functionName'), substring(uniqueString(resourceGroup().id),0,4))]",
+        "functionStorageAccountOPName": "[concat(parameters('functionName'),'op', substring(uniqueString(resourceGroup().id),0,4))]",
+        "workerSize": "0",
+        "workerSizeId": "0",
+        "numberOfWorkers": "1"
+    },
+    "resources": [
+        {
+            "apiVersion": "2018-11-01",
+            "name": "[parameters('functionName')]",
+            "type": "Microsoft.Web/sites",
+            "kind": "functionapp",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "dependsOn": [
+                "[concat('Microsoft.insights/components/', parameters('functionName'))]",
+                "[concat('Microsoft.Web/serverfarms/', parameters('functionASPName'))]",
+                "[concat('Microsoft.Storage/storageAccounts/', variables('functionStorageAccountName'))]",
+                "[concat('Microsoft.Storage/storageAccounts/', variables('functionStorageAccountOPName'))]"
+            ],
+            "properties": {
+                "name": "[parameters('functionName')]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~3"
+                        },
+                        {
+                            "name": "FUNCTIONS_WORKER_RUNTIME",
+                            "value": "dotnet"
+                        },
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(concat('Microsoft.insights/components/', parameters('functionName')), '2015-05-01').InstrumentationKey]"
+                        },
+                        {
+                            "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                            "value": "[reference(concat('Microsoft.insights/components/', parameters('functionName')), '2015-05-01').ConnectionString]"
+                        },
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('functionStorageAccountName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+                        },
+                        {
+                            "name": "AzureWebJobsDashboard",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('functionStorageAccountName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+                        },
+                        {
+                            "name": "MainQueueConnection",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('functionStorageAccountOPName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('functionStorageAccountOPName')), '2019-06-01').keys[0].value,';EndpointSuffix=','core.windows.net')]"
+                        },
+                        {
+                            "name": "ResourceGroupCreatedQueueName",
+                            "value": "resource-group-created"
+                        }
+                    ],
+                    "use32BitWorkerProcess": "[parameters('use32BitWorkerProcess')]",
+                    "alwaysOn": "[parameters('alwaysOn')]"
+                },
+                "serverFarmId": "[concat('/subscriptions/', subscription().subscriptionId,'/resourcegroups/', resourceGroup().name, '/providers/Microsoft.Web/serverfarms/', parameters('functionASPName'))]",
+                "clientAffinityEnabled": true
+            }
+        },
+        {
+            "apiVersion": "2018-11-01",
+            "name": "[parameters('functionASPName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[resourceGroup().location]",
+            "kind": "",
+            "tags": {},
+            "dependsOn": [],
+            "properties": {
+                "name": "[parameters('functionASPName')]",
+                "workerSize": "[variables('workerSize')]",
+                "workerSizeId": "[variables('workerSizeId')]",
+                "numberOfWorkers": "[variables('numberOfWorkers')]"
+            },
+            "sku": {
+                "Tier": "[parameters('sku')]",
+                "Name": "[parameters('AppServicePlanskuCode')]"
+            }
+        },
+        {
+            "apiVersion": "2015-05-01",
+            "name": "[parameters('functionName')]",
+            "type": "microsoft.insights/components",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "properties": {
+                "ApplicationId": "[parameters('functionName')]",
+                "Request_Source": "IbizaWebAppExtensionCreate"
+            }
+        },
+        {
+            "apiVersion": "2019-06-01",
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('functionStorageAccountName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            "apiVersion": "2019-06-01",
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('functionStorageAccountOPName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            }
+        }
+    ]
+}
