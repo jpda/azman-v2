@@ -25,7 +25,7 @@ jobs:
     - name: 'Login via Azure CLI'
       uses: jpda/login@v1
       with:
-        useManagedIdentity: true
+        enable-managed-identity: true
 
     - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
       uses: actions/setup-dotnet@v1
