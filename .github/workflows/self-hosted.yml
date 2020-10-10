@@ -23,7 +23,7 @@ jobs:
       uses: actions/checkout@master
 
     - name: 'Login via Azure CLI'
-      uses: jpda/login
+      uses: jpda/login@v1.2
       with:
         enable-managed-identity: true
 
