@@ -1,4 +1,4 @@
-name: Self-hosted user-assigned MSI
+name: Self-hosted system-assigned MSI
 
 on:
   [push]
