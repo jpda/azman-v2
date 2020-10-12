@@ -29,4 +29,4 @@ jobs:
         user-managed-identity-resource-id: '/subscriptions/e7048bdb-835c-440f-9304-aa4171382839/resourceGroups/service-me-p-github-actions-runner/providers/Microsoft.ManagedIdentity/userAssignedIdentities/user-managed-identity-for-test'
    
     - run: |
-        az webapp list --query "[?state=='Running']"
+        az account show
