@@ -1,4 +1,4 @@
-name: Deploy AzMan project to Azure Function App
+name: Self-hosted AzPS System MSI
 
 on:
   [push]
