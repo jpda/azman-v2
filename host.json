@@ -6,6 +6,10 @@
             "samplingSettings": {
                 "isEnabled": true
             }
+        },
+        "logLevel": {
+            "default": "Information",
+            "azman_v2": "Trace"
         }
     }
 }
