@@ -99,7 +99,7 @@ namespace azman_v2
             var resourceManagerClient = new ResourcesManagementClient(subscriptionId, new DefaultAzureCredential());
             var exportedTemplate = await resourceManagerClient.ResourceGroups.StartExportTemplateAsync(groupName,
                 new Azure.ResourceManager.Resources.Models.ExportTemplateRequest());
-            if (exportedTemplate.HasValue) return exportedTemplate.Value.Template.ToString();
+            if (exportedTemplate.HasValue) return (string)exportedTemplate.Value.Template; // todo: y tho?
             return string.Empty;
         }
     }
@@ -232,5 +232,10 @@ namespace azman_v2
     {
         public string SubscriptionId { get; set; }
         public string ResourceId { get; set; }
+        public ResourceSearchResult(string subscriptionId, string resourceId)
+        {
+            this.SubscriptionId = subscriptionId;
+            this.ResourceId = resourceId;
+        }
     }
 }

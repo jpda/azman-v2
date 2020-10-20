@@ -50,7 +50,7 @@ namespace azman_v2
         }
 
         [FunctionName("ScannerUntagged")]
-        public async Task FindUntaggedResources([TimerTrigger("0 */5 * * * *")] TimerInfo timer,
+        public async Task FindUntaggedResources([TimerTrigger("0 */5 * * * *")] TimerInfo _,
             [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TaggingRequestModel> outboundQueue
         )
         {
@@ -66,31 +66,47 @@ namespace azman_v2
         }
 
         [FunctionName("ScannerExpired")]
-        public async Task FindExpired([TimerTrigger("0 */5 * * * *")] TimerInfo timer,
-            [Queue("%ResourceGroupExpiredQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TaggingRequestModel> outboundQueue
+        public async Task FindExpired(
+            [TimerTrigger("0 */5 * * * *")] TimerInfo _,
+            [Queue("%ResourceGroupExpiredQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> outboundQueue
         )
         {
             var resourcesPastExpirationDate = await _scanner.ScanForExpiredResources(DateTimeOffset.UtcNow);
-
+            // output to expired queue -->
+            var resourcesToTag = resourcesPastExpirationDate.Select(x => new ResourceSearchResult(
+                subscriptionId: x.SubscriptionId,
+                resourceId: x.ResourceId
+            ));
+            await outboundQueue.AddRangeAsync(resourcesToTag);
 
         }
 
         [FunctionName("ScannerUpcomingDeletion")]
-        public async Task FindUpcoming()
+        public async Task FindUpcoming(
+            [TimerTrigger("0 */5 * * * *")] TimerInfo _,
+            [Queue("%ResourceGroupNotifyQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> outboundQueue
+        )
         {
             var resourcesNearDeletion = await _scanner.ScanForExpiredResources(DateTimeOffset.UtcNow.AddDays(3));
-            // output to deletion queue --> 
+            // output to notification queue -->
+            var resourcesToTag = resourcesNearDeletion.Select(x => new ResourceSearchResult(
+               subscriptionId: x.SubscriptionId,
+               resourceId: x.ResourceId
+           ));
+            await outboundQueue.AddRangeAsync(resourcesToTag);
         }
 
         // todo: best candidate for durable functions
         [FunctionName("ResourceGroupExpired")]
         public async Task ResourceGroupExpired(
-
+            [QueueTrigger("%ResourceGroupExpiredQueueName%", Connection = "MainStorageConnection")] ResourceSearchResult request,
+            [Queue("%ResourceGroupPersistQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> persistQueue
         ) // at this point, the deletion is committed and will happen
         {
             // notify deletion --> this
 
             // persist resource group template to storage --> that
+            await persistQueue.AddAsync(request);
 
             // queue up for deletion --> don't do this until this and that are done
         }

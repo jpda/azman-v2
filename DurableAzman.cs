@@ -11,29 +11,31 @@ namespace azman_v2.Durable
 {
     public static class DurableAzman
     {
-        [FunctionName("DurableAzman")]
+        // [FunctionName("DurableAzman")]
         public static async Task<List<string>> RunOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext context)
         {
-            var outputs = new List<string>();
+            var outputs = new List<string>
+            {
 
-            // Replace "hello" with the name of your Durable Activity Function.
-            outputs.Add(await context.CallActivityAsync<string>("DurableAzman_Hello", "Tokyo"));
-            outputs.Add(await context.CallActivityAsync<string>("DurableAzman_Hello", "Seattle"));
-            outputs.Add(await context.CallActivityAsync<string>("DurableAzman_Hello", "London"));
+                // Replace "hello" with the name of your Durable Activity Function.
+                await context.CallActivityAsync<string>("DurableAzman_Hello", "Tokyo"),
+                await context.CallActivityAsync<string>("DurableAzman_Hello", "Seattle"),
+                await context.CallActivityAsync<string>("DurableAzman_Hello", "London")
+            };
 
             // returns ["Hello Tokyo!", "Hello Seattle!", "Hello London!"]
             return outputs;
         }
 
-        [FunctionName("DurableAzman_Hello")]
+        // [FunctionName("DurableAzman_Hello")]
         public static string SayHello([ActivityTrigger] string name, ILogger log)
         {
             log.LogInformation($"Saying hello to {name}.");
             return $"Hello {name}!";
         }
 
-        [FunctionName("DurableAzman_HttpStart")]
+        // [FunctionName("DurableAzman_HttpStart")]
         public static async Task<HttpResponseMessage> HttpStart(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestMessage req,
             [DurableClient] IDurableOrchestrationClient starter,
