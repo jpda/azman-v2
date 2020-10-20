@@ -96,7 +96,7 @@ namespace azman_v2
             await outboundQueue.AddRangeAsync(resourcesToTag);
         }
 
-        // todo2: best candidate for durable functions
+        // todo: best candidate for durable functions
         [FunctionName("ResourceGroupExpired")]
         public async Task ResourceGroupExpired(
             [QueueTrigger("%ResourceGroupExpiredQueueName%", Connection = "MainStorageConnection")] ResourceSearchResult request,
