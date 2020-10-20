@@ -64,7 +64,7 @@ namespace azman_v2
             if (resourceGroupRequest == null) return;
             var resourceGroup = resourceGroupRequest.Value;
 
-            // todo: move this as default to configuration
+            // todo2: move this as default to configuration
             var newDate = request.DateCreated.AddDays(30).Date;
 
             resourceGroup.Tags.TryAdd("expires", newDate.ToString("yyyy-MM-dd"));
@@ -83,10 +83,10 @@ namespace azman_v2
             await resourceManagerClient.ResourceGroups.CreateOrUpdateAsync(resourceGroup.Name, resourceGroup);
         }
 
-        // todo: explore changes required for using resource ID for _any_ resource
+        // todo2: explore changes required for using resource ID for _any_ resource
         public async Task DeleteResource(string subscriptionId, string resourceGroupName)
         {
-            // todo: what-if? --> log deletion, but don't execute
+            // todo2: what-if? --> log deletion, but don't execute
             // connect to azure
             _log.LogInformation($"Request to delete {resourceGroupName} from subscription {subscriptionId}");
             var resourceManagerClient = new ResourcesManagementClient(subscriptionId, new DefaultAzureCredential());
@@ -95,11 +95,11 @@ namespace azman_v2
 
         public async Task<string> ExportResourceGroupTemplateByName(string subscriptionId, string groupName)
         {
-            // todo: tweak based on output and ease of re-deploy
+            // todo2: tweak based on output and ease of re-deploy
             var resourceManagerClient = new ResourcesManagementClient(subscriptionId, new DefaultAzureCredential());
             var exportedTemplate = await resourceManagerClient.ResourceGroups.StartExportTemplateAsync(groupName,
                 new Azure.ResourceManager.Resources.Models.ExportTemplateRequest());
-            if (exportedTemplate.HasValue) return (string)exportedTemplate.Value.Template; // todo: y tho?
+            if (exportedTemplate.HasValue) return (string)exportedTemplate.Value.Template; // todo2: y tho?
             return string.Empty;
         }
     }
@@ -118,10 +118,10 @@ namespace azman_v2
         private readonly HttpClient _httpClient;
         private readonly ILogger<Scanner> _log;
 
-        // todo: configuration for national clouds, e.g., https://management.chinacloudapi.cn
+        // todo2: configuration for national clouds, e.g., https://management.chinacloudapi.cn
         private readonly string _managementEndpoint = "https://management.azure.com/";
         private readonly string _managementAzureAdResourceId = "https://management.azure.com/";
-        // todo: configuration to allow/deny specific subscriptions
+        // todo2: configuration to allow/deny specific subscriptions
         private readonly List<string> _subscriptionIds;
 
         public Scanner(ITokenProvider tokenProvider, IHttpClientFactory httpFactory, ILoggerFactory loggerFactory)
@@ -134,7 +134,7 @@ namespace azman_v2
 
         private async Task<IEnumerable<string>> FindAccessibleSubscriptions(bool forceRefresh = false)
         {
-            // todo: hack for testing until configurable subscription list is available
+            // todo2: hack for testing until configurable subscription list is available
             _subscriptionIds.Add("e7048bdb-835c-440f-9304-aa4171382839");
             if (!forceRefresh || _subscriptionIds.Any())
             {
