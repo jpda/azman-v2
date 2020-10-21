@@ -4,6 +4,7 @@ namespace azman_v2
 {
     public interface ITokenProvider
     {
-        Task<string> GetAccessTokenAsync(string resource = "https://graph.microsoft.com", bool forceRefresh = false);
+        AccessTokenResponse GetAccessToken(string[] scopes, bool forceRefresh = false);
+        Task<AccessTokenResponse> GetAccessTokenAsync(string[] scopes, bool forceRefresh = false);
     }
 }

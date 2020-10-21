@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using Azure.Identity;
 using Azure.ResourceManager.Resources;
 
-using Microsoft.Azure.Services.AppAuthentication;
 using azman_v2.Model;
 
 namespace azman_v2
@@ -48,7 +47,7 @@ namespace azman_v2
         public async Task TagResource(TaggingRequestModel request)
         {
             // connect to azure
-            var resourceManagerClient = new ResourcesManagementClient(request.SubscriptionId, new DefaultAzureCredential());
+            var resourceManagerClient = new ResourcesManagementClient(request.SubscriptionId, new ChainedTokenCredential(new ManagedIdentityCredential(), new AzureCliCredential()));
             var resourceGroupRequest = await resourceManagerClient.ResourceGroups.GetAsync(request.ResourceGroupName);
 
             if (resourceGroupRequest == null) return;

@@ -43,8 +43,8 @@ namespace azman_v2
             _log.LogTrace($"Getting subscription list starting at ${DateTime.UtcNow}");
             _log.LogTrace($"Getting access token for ${_managementAzureAdResourceId}");
 
-            var token = await _tokenProvider.GetAccessTokenAsync(_managementAzureAdResourceId, false);
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var token = await _tokenProvider.GetAccessTokenAsync(new[] { _managementAzureAdResourceId }, false);
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
 
             // resource graph is expecting an array of subscriptions, so get the subscription list first
             var subRequest = await _httpClient.GetAsync($"{_managementEndpoint}subscriptions?api-version=2020-01-01");
@@ -67,7 +67,8 @@ namespace azman_v2
         private async Task<IEnumerable<ResourceSearchResult>> QueryResourceGraph(string queryText)
         {
             var subscriptions = await FindAccessibleSubscriptions();
-            var graphClient = new ResourceGraphClient(new Microsoft.Rest.TokenCredentials(await _tokenProvider.GetAccessTokenAsync(_managementAzureAdResourceId)));
+            var token = await _tokenProvider.GetAccessTokenAsync(new[] { _managementAzureAdResourceId });
+            var graphClient = new ResourceGraphClient(new Microsoft.Rest.TokenCredentials(token.Token));
             var query = await graphClient.ResourcesAsync(new QueryRequest(subscriptions.ToList(), queryText));
 
             var resources = new List<ResourceSearchResult>();
