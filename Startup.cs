@@ -35,14 +35,6 @@ namespace azman_v2
             }
             builder.Services.AddSingleton<IResourceManagementService, AzureResourceManagementService>();
             builder.Services.AddSingleton<IScanner, Scanner>();
-
-
-
-            // builder.Services.AddSingleton<IMyService>((s) =>
-            // {
-            //     return new MyService();
-            // });
-            // builder.Services.AddSingleton<ILoggerProvider, MyLoggerProvider>();
         }
     }
 }

@@ -67,7 +67,7 @@ namespace azman_v2
             await outboundQueue.AddRangeAsync(resourcesToTag);
         }
 
-        [FunctionName("ScannerExpired")]
+        //[FunctionName("ScannerExpired")]
         public async Task FindExpired(
             [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
             [Queue("%ResourceGroupExpiredQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> outboundQueue
@@ -84,7 +84,7 @@ namespace azman_v2
 
         }
 
-        [FunctionName("ScannerUpcomingDeletion")]
+        //[FunctionName("ScannerUpcomingDeletion")]
         public async Task FindUpcoming(
             [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
             [Queue("%ResourceGroupNotifyQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> outboundQueue

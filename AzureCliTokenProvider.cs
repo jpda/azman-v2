@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -12,16 +14,14 @@ namespace azman_v2
 {
     public class AzureCliTokenProvider : ITokenProvider
     {
-        private readonly Dictionary<string, AccessTokenResponse> _tokens;
+        private readonly ConcurrentDictionary<string, AccessTokenResponse> _tokens;
         private readonly ILogger<AzureCliTokenProvider> _log;
 
         public AzureCliTokenProvider(ILoggerFactory loggerFactory)
         {
             _log = loggerFactory.CreateLogger<AzureCliTokenProvider>();
-            _tokens = new Dictionary<string, AccessTokenResponse>();
+            _tokens = new ConcurrentDictionary<string, AccessTokenResponse>();
         }
-
-
 
         private AccessTokenResponse GetToken(string resource)
         {
@@ -34,7 +34,7 @@ namespace azman_v2
             _log.LogTrace($"Got a token for {resource}, refreshing...");
             var doc = System.Text.Json.JsonDocument.Parse(output);
             var token = doc.RootElement.GetProperty("accessToken").GetString();
-            var expiry = doc.RootElement.GetProperty("expiresOn").GetDateTimeOffset();
+            var expiry = DateTimeOffset.ParseExact(doc.RootElement.GetProperty("expiresOn").GetString(), "yyyy-MM-dd HH:mm:ss.ffffff", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
             proc.WaitForExit();
             proc.Close();
             return new AccessTokenResponse(resource, token, expiry);
@@ -44,18 +44,12 @@ namespace azman_v2
         {
             var resource = ScopeUtil.GetResourceFromScope(scopes);
             _log.LogTrace($"Fetching access token via CLI for {resource} ({string.Join(',', scopes)}); forcedRefresh: {forceRefresh}");
-            if (!_tokens.ContainsKey(resource))
+            // todo: make sure i'm not missing something here
+            if (!_tokens.ContainsKey(resource) || forceRefresh)
             {
-                var token = GetToken(resource);
-                _tokens.Add(resource, token);
+                _tokens.AddOrUpdate(resource, x => GetToken(resource), (y, z) => GetToken(resource));
             }
-
-            if (_tokens.ContainsKey(resource) && forceRefresh)
-            {
-                var token = GetToken(resource);
-                _tokens[resource] = token;
-            }
-            return _tokens[resource];
+            return _tokens.GetOrAdd(resource, x => GetToken(resource));
         }
 
         public Task<AccessTokenResponse> GetAccessTokenAsync(string[] scopes, bool forceRefresh = false)

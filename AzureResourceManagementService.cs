@@ -16,10 +16,14 @@ namespace azman_v2
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<AzureResourceManagementService> _log;
-        public AzureResourceManagementService(IHttpClientFactory httpFactory, ILoggerFactory loggerFactory)
+        private readonly ITokenProvider _tokenProvider;
+        private readonly Azure.Core.TokenCredential _tokenCredential;
+        public AzureResourceManagementService(IHttpClientFactory httpFactory, ILoggerFactory loggerFactory, ITokenProvider tokenProvider)
         {
             _httpClient = httpFactory.CreateClient();
             _log = loggerFactory.CreateLogger<AzureResourceManagementService>();
+            _tokenProvider = tokenProvider;
+            _tokenCredential = new ExternalAzureTokenCredential(_tokenProvider);
         }
 
         public TaggingRequestModel? ProcessAlert(dynamic alert)
@@ -47,29 +51,38 @@ namespace azman_v2
         public async Task TagResource(TaggingRequestModel request)
         {
             // connect to azure
-            var resourceManagerClient = new ResourcesManagementClient(request.SubscriptionId, new ChainedTokenCredential(new ManagedIdentityCredential(), new AzureCliCredential()));
-            var resourceGroupRequest = await resourceManagerClient.ResourceGroups.GetAsync(request.ResourceGroupName);
+            var resourceManagerClient = new ResourcesManagementClient(request.SubscriptionId, _tokenCredential);
 
-            if (resourceGroupRequest == null) return;
-            var resourceGroup = resourceGroupRequest.Value;
-
-            // todo: move this as default to configuration
-            var newDate = request.DateCreated.AddDays(30).Date;
-
-            resourceGroup.Tags.TryAdd("expires", newDate.ToString("yyyy-MM-dd"));
-            resourceGroup.Tags.TryAdd("tagged-by", "thrazman");
-            resourceGroup.Tags.TryAdd("owner", request.CreatedByUser);
-
-            // service-msft-prod-azman-main-compute
-            var groupNamePieces = resourceGroup.Name.Split('-');
-            if (groupNamePieces.Count() >= 3)
+            try
             {
-                resourceGroup.Tags.TryAdd("function", groupNamePieces[0]); // service
-                resourceGroup.Tags.TryAdd("customer", groupNamePieces[1]); // msft
-                resourceGroup.Tags.TryAdd("env", groupNamePieces[2]); // prod
-                resourceGroup.Tags.TryAdd("project", string.Join('-', groupNamePieces.Skip(3))); //azman-main-compute
+                var resourceGroupRequest = await resourceManagerClient.ResourceGroups.GetAsync(request.ResourceGroupName);
+
+                if (resourceGroupRequest == null) return;
+                var resourceGroup = resourceGroupRequest.Value;
+
+                // todo: move this as default to configuration
+                var newDate = request.DateCreated.AddDays(30).Date;
+
+                resourceGroup.Tags.TryAdd("expires", newDate.ToString("yyyy-MM-dd"));
+                resourceGroup.Tags.TryAdd("tagged-by", "thrazman");
+                resourceGroup.Tags.TryAdd("owner", request.CreatedByUser);
+
+                // service-msft-prod-azman-main-compute
+                var groupNamePieces = resourceGroup.Name.Split('-');
+                if (groupNamePieces.Count() >= 3)
+                {
+                    resourceGroup.Tags.TryAdd("function", groupNamePieces[0]); // service
+                    resourceGroup.Tags.TryAdd("customer", groupNamePieces[1]); // msft
+                    resourceGroup.Tags.TryAdd("env", groupNamePieces[2]); // prod
+                    resourceGroup.Tags.TryAdd("project", string.Join('-', groupNamePieces.Skip(3))); //azman-main-compute
+                }
+                await resourceManagerClient.ResourceGroups.CreateOrUpdateAsync(resourceGroup.Name, resourceGroup);
             }
-            await resourceManagerClient.ResourceGroups.CreateOrUpdateAsync(resourceGroup.Name, resourceGroup);
+            catch (System.Exception ex)
+            {
+                _log.LogError(ex, ex.Message);
+                throw;
+            }
         }
 
         // todo: explore changes required for using resource ID for _any_ resource
@@ -78,14 +91,14 @@ namespace azman_v2
             // todo: what-if? --> log deletion, but don't execute
             // connect to azure
             _log.LogInformation($"Request to delete {resourceGroupName} from subscription {subscriptionId}");
-            var resourceManagerClient = new ResourcesManagementClient(subscriptionId, new DefaultAzureCredential());
+            var resourceManagerClient = new ResourcesManagementClient(subscriptionId, _tokenCredential);
             await resourceManagerClient.ResourceGroups.StartDeleteAsync(resourceGroupName);
         }
 
         public async Task<string> ExportResourceGroupTemplateByName(string subscriptionId, string groupName)
         {
             // todo: tweak based on output and ease of re-deploy
-            var resourceManagerClient = new ResourcesManagementClient(subscriptionId, new DefaultAzureCredential());
+            var resourceManagerClient = new ResourcesManagementClient(subscriptionId, _tokenCredential);
             var exportedTemplate = await resourceManagerClient.ResourceGroups.StartExportTemplateAsync(groupName,
                 new Azure.ResourceManager.Resources.Models.ExportTemplateRequest());
             if (exportedTemplate.HasValue) return (string)exportedTemplate.Value.Template; // todo: y tho?
