@@ -1,4 +1,4 @@
-name: deploy thrazman with msi
+name: deploy thrazman with service principal
 
 on: [push]
 env:
@@ -8,7 +8,7 @@ env:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@master
@@ -16,7 +16,7 @@ jobs:
     - name: 'Login via Azure CLI'
       uses: jpda/login@v1.2
       with:
-        enable-managed-identity: true
+        creds: ${{secrets.AZURE_CREDENTIALS}}
 
     - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
       uses: actions/setup-dotnet@v1
