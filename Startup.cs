@@ -33,7 +33,7 @@ namespace azman_v2
             {
                 builder.Services.AddSingleton<ITokenProvider, AzureManagedIdentityServiceTokenProvider>();
             }
-
+            builder.Services.AddSingleton<IResourceManagementService, AzureResourceManagementService>();
             builder.Services.AddSingleton<IScanner, Scanner>();
 
 

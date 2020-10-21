@@ -17,20 +17,21 @@ namespace azman_v2
     {
         private readonly IScanner _scanner;
         private readonly IResourceManagementService _resourceManager;
-        public Functions(IScanner scanner, IResourceManagementService manager)
+        private readonly ILogger<Functions> _log;
+        public Functions(IScanner scanner, IResourceManagementService manager, ILoggerFactory loggerFactory)
         {
             _scanner = scanner;
             _resourceManager = manager;
+            _log = loggerFactory.CreateLogger<Functions>();
         }
 
         [FunctionName("OnResourceGroupCreate")]
         public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TaggingRequestModel> outboundQueue,
-            ILogger log)
+            [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TaggingRequestModel> outboundQueue)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            log.LogTrace($"Received payload: {requestBody}");
+            _log.LogTrace($"Received payload: {requestBody}");
             dynamic alert = JsonSerializer.Deserialize<dynamic>(requestBody);
             var tagRequest = _resourceManager.ProcessAlert(alert);
             if (tagRequest.HasValue)
@@ -50,10 +51,11 @@ namespace azman_v2
         }
 
         [FunctionName("ScannerUntagged")]
-        public async Task FindUntaggedResources([TimerTrigger("0 */5 * * * *")] TimerInfo _,
+        public async Task FindUntaggedResources([TimerTrigger("0 */5 * * * *")] TimerInfo timer,
             [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TaggingRequestModel> outboundQueue
         )
         {
+            _log.LogTrace($"ScannerUntagged timer past due: {timer.IsPastDue}; next run: {timer.Schedule.GetNextOccurrence(DateTime.UtcNow)}");
             var untaggedResources = await _scanner.ScanForUntaggedResources();
             // output to tag queue -->
             var resourcesToTag = untaggedResources.Select(x => new TaggingRequestModel(
@@ -67,10 +69,11 @@ namespace azman_v2
 
         [FunctionName("ScannerExpired")]
         public async Task FindExpired(
-            [TimerTrigger("0 */5 * * * *")] TimerInfo _,
+            [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
             [Queue("%ResourceGroupExpiredQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> outboundQueue
         )
         {
+            _log.LogTrace($"ScannerExpired timer past due: {timer.IsPastDue}; next run: {timer.Schedule.GetNextOccurrence(DateTime.UtcNow)}");
             var resourcesPastExpirationDate = await _scanner.ScanForExpiredResources(DateTimeOffset.UtcNow);
             // output to expired queue -->
             var resourcesToTag = resourcesPastExpirationDate.Select(x => new ResourceSearchResult(
@@ -83,10 +86,11 @@ namespace azman_v2
 
         [FunctionName("ScannerUpcomingDeletion")]
         public async Task FindUpcoming(
-            [TimerTrigger("0 */5 * * * *")] TimerInfo _,
+            [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
             [Queue("%ResourceGroupNotifyQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> outboundQueue
         )
         {
+            _log.LogTrace($"ScannerUpcomingDeletion timer past due: {timer.IsPastDue}; next run: {timer.Schedule.GetNextOccurrence(DateTime.UtcNow)}");
             var resourcesNearDeletion = await _scanner.ScanForExpiredResources(DateTimeOffset.UtcNow.AddDays(3));
             // output to notification queue -->
             var resourcesToTag = resourcesNearDeletion.Select(x => new ResourceSearchResult(

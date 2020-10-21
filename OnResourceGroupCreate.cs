@@ -23,14 +23,14 @@ namespace azman_v2
         Task TagResource(TaggingRequestModel request);
         Task<string> ExportResourceGroupTemplateByName(string subscriptionId, string groupName);
     }
-    public class ResourceManagementService : IResourceManagementService
+    public class AzureResourceManagementService : IResourceManagementService
     {
         private readonly HttpClient _httpClient;
-        private readonly ILogger<ResourceManagementService> _log;
-        public ResourceManagementService(IHttpClientFactory httpFactory, ILoggerFactory loggerFactory)
+        private readonly ILogger<AzureResourceManagementService> _log;
+        public AzureResourceManagementService(IHttpClientFactory httpFactory, ILoggerFactory loggerFactory)
         {
             _httpClient = httpFactory.CreateClient();
-            _log = loggerFactory.CreateLogger<ResourceManagementService>();
+            _log = loggerFactory.CreateLogger<AzureResourceManagementService>();
         }
 
         public TaggingRequestModel? ProcessAlert(dynamic alert)
