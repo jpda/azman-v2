@@ -1,4 +1,4 @@
-name: Deploy AzMan project to Azure Function App
+name: deploy thrazman with msi
 
 on: [push]
 env:
@@ -8,7 +8,7 @@ env:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@master
@@ -16,7 +16,7 @@ jobs:
     - name: 'Login via Azure CLI'
       uses: jpda/login@v1.2
       with:
-        creds: ${{secrets.AZURE_CREDENTIALS}}
+        enable-managed-identity: true
 
     - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
       uses: actions/setup-dotnet@v1
