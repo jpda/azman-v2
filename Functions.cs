@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -28,7 +29,7 @@ namespace azman_v2
         [FunctionName("OnResourceGroupCreate")]
         public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TaggingRequestModel> outboundQueue)
+            [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TagSuiteModel> outboundQueue)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             _log.LogTrace($"Received payload: {requestBody}");
@@ -44,24 +45,24 @@ namespace azman_v2
 
         [FunctionName("TagResourceGroup")]
         public async Task TagResourceGroup(
-            [QueueTrigger("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] TaggingRequestModel request
+            [QueueTrigger("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] TagSuiteModel request
         )
         {
-            await _resourceManager.TagResource(request);
+            await _resourceManager.AddTagSuite(request);
         }
 
         [FunctionName("ScannerUntagged")]
         public async Task FindUntaggedResources([TimerTrigger("0 */5 * * * *")] TimerInfo timer,
-            [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TaggingRequestModel> outboundQueue
+            [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TagSuiteModel> outboundQueue
         )
         {
             _log.LogTrace($"ScannerUntagged timer past due: {timer.IsPastDue}; next run: {timer.Schedule.GetNextOccurrence(DateTime.UtcNow)}");
             var untaggedResources = await _scanner.ScanForUntaggedResources();
             // output to tag queue -->
-            var resourcesToTag = untaggedResources.Select(x => new TaggingRequestModel(
+            var resourcesToTag = untaggedResources.Select(x => new TagSuiteModel(
                 subscriptionId: x.SubscriptionId,
                 groupName: x.ResourceId,
-                created: DateTime.UtcNow,
+                managementDate: DateTime.UtcNow,
                 user: "thrazman"
             ));
             await outboundQueue.AddRangeAsync(resourcesToTag);
@@ -137,6 +138,7 @@ namespace azman_v2
 
             using var writer = await binder.BindAsync<TextWriter>(attributes).ConfigureAwait(false);
             writer.Write(templateData);
+            await _resourceManager.AddTags(request.ResourceId, request.SubscriptionId, new KeyValuePair<string, string>("exported", "true"));
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -26,7 +25,7 @@ namespace azman_v2
             _tokenCredential = new ExternalAzureTokenCredential(_tokenProvider);
         }
 
-        public TaggingRequestModel? ProcessAlert(dynamic alert)
+        public TagSuiteModel? ProcessAlert(dynamic alert)
         {
             if (!string.Equals(alert.data.context.activityLog.status.ToString(), "Succeeded", StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(alert.data.context.activityLog.subStatus.ToString(), "Created", StringComparison.OrdinalIgnoreCase))
@@ -40,49 +39,44 @@ namespace azman_v2
             _log.LogTrace($"{alert.data.context.activityLog.resourceGroupName}");
 
             // handles queueing up new resource groups to be tagged
-            return new TaggingRequestModel(
+            return new TagSuiteModel(
                 groupName: alert.data.context.activityLog.resourceGroupName,
-                user: alert.data.context.activityLog.caller,
                 subscriptionId: alert.data.context.activityLog.subscriptionId,
-                created: alert.data.context.activityLog.eventTimestamp
+                user: alert.data.context.activityLog.caller,
+                managementDate: alert.data.context.activityLog.eventTimestamp
             );
         }
 
-        public async Task TagResource(TaggingRequestModel request)
+        public async Task AddTagSuite(TagSuiteModel request)
         {
-            // connect to azure
-            var resourceManagerClient = new ResourcesManagementClient(request.SubscriptionId, _tokenCredential);
+            request.GenerateBaseTags();
+            await AddTags(request);
+        }
 
+        public async Task AddTags(TagModel request)
+        {
+            var resourceManagerClient = new ResourcesManagementClient(request.SubscriptionId, _tokenCredential);
+            var resourceGroupRequest = await resourceManagerClient.ResourceGroups.GetAsync(request.ResourceGroupName);
+            if (resourceGroupRequest == null) return;
+            var resourceGroup = resourceGroupRequest.Value;
             try
             {
-                var resourceGroupRequest = await resourceManagerClient.ResourceGroups.GetAsync(request.ResourceGroupName);
-
-                if (resourceGroupRequest == null) return;
-                var resourceGroup = resourceGroupRequest.Value;
-
-                // todo: move this as default to configuration
-                var newDate = request.DateCreated.AddDays(30).Date;
-
-                resourceGroup.Tags.TryAdd("expires", newDate.ToString("yyyy-MM-dd"));
-                resourceGroup.Tags.TryAdd("tagged-by", "thrazman");
-                resourceGroup.Tags.TryAdd("owner", request.CreatedByUser);
-
-                // service-msft-prod-azman-main-compute
-                var groupNamePieces = resourceGroup.Name.Split('-');
-                if (groupNamePieces.Count() >= 3)
+                foreach (var t in request.Tags)
                 {
-                    resourceGroup.Tags.TryAdd("function", groupNamePieces[0]); // service
-                    resourceGroup.Tags.TryAdd("customer", groupNamePieces[1]); // msft
-                    resourceGroup.Tags.TryAdd("env", groupNamePieces[2]); // prod
-                    resourceGroup.Tags.TryAdd("project", string.Join('-', groupNamePieces.Skip(3))); //azman-main-compute
+                    resourceGroup.Tags.TryAdd(t.Key, t.Value);
                 }
                 await resourceManagerClient.ResourceGroups.CreateOrUpdateAsync(resourceGroup.Name, resourceGroup);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
+                // todo: what happens when tagging fails? what's recoverable? what's not?
                 _log.LogError(ex, ex.Message);
-                throw;
             }
+        }
+
+        public async Task AddTags(string resourceGroup, string subscriptionId, params KeyValuePair<string, string>[] tags)
+        {
+            await AddTags(new TagModel(resourceGroup, subscriptionId, tags));
         }
 
         // todo: explore changes required for using resource ID for _any_ resource
