@@ -100,19 +100,19 @@ namespace azman_v2
 
         public async Task<IEnumerable<ResourceSearchResult>> ScanForExpiredResources()
         {
-            var expiredQuery = @"resourcecontainers | where (!isnull(tags.['expires'])) 
+            var expiredQuery = @"resourcecontainers | where (isnotnull(tags.['expires'])) 
                                                       and type == 'microsoft.resources/subscriptions/resourcegroups'
                                                       and todatetime(tags['expires']) < now()
                                                     | project name, subscriptionId, id";
             return await QueryResourceGraph(expiredQuery);
         }
 
-        public async Task<IEnumerable<ResourceSearchResult>> ScanForExpiredResources(DateTimeOffset expirationDate)
+        public async Task<IEnumerable<ResourceSearchResult>> ScanForExpiredResources(DateTime expirationDate)
         {
             // and todatetime(tags.['expires']) < now() + 14d
-            var expiredQuery = $@"resourcecontainers | where (!isnull(tags.['expires'])) 
+            var expiredQuery = $@"resourcecontainers | where (isnotnull(tags.['expires'])) 
                                                        and type == 'microsoft.resources/subscriptions/resourcegroups'
-                                                       and todatetime(tags['expires']) < todatetime({expirationDate})
+                                                       and todatetime(tags['expires']) < todatetime('{expirationDate:o}')
                                                      | project name, subscriptionId, id";
             return await QueryResourceGraph(expiredQuery);
         }
@@ -120,7 +120,7 @@ namespace azman_v2
         public async Task<IEnumerable<ResourceSearchResult>> ScanForExpiredResources(string kustoDateExpression)
         {
             // e.g., and todatetime(tags.['expires']) < now() + 3d
-            var expiredQuery = $@"resourcecontainers | where (!isnull(tags.['expires'])) 
+            var expiredQuery = $@"resourcecontainers | where (isnotnull(tags.['expires'])) 
                                                        and type == 'microsoft.resources/subscriptions/resourcegroups'
                                                        and todatetime(tags['expires']) < {kustoDateExpression}
                                                      | project name, subscriptionId, id";

@@ -75,7 +75,7 @@ namespace azman_v2
         )
         {
             _log.LogTrace($"ScannerExpired timer past due: {timer.IsPastDue}; next run: {timer.Schedule.GetNextOccurrence(DateTime.UtcNow)}");
-            var resourcesPastExpirationDate = await _scanner.ScanForExpiredResources(DateTimeOffset.UtcNow);
+            var resourcesPastExpirationDate = await _scanner.ScanForExpiredResources(DateTime.UtcNow);
             // output to expired queue -->
             var resourcesToTag = resourcesPastExpirationDate.Select(x => new ResourceSearchResult(
                 subscriptionId: x.SubscriptionId,
@@ -87,12 +87,12 @@ namespace azman_v2
 
         [FunctionName("ScannerUpcomingDeletion")]
         public async Task FindUpcoming(
-            [TimerTrigger("%FindUpcomingSchedule")] TimerInfo timer,
+            [TimerTrigger("%FindUpcomingSchedule%")] TimerInfo timer,
             [Queue("%ResourceGroupNotifyQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> outboundQueue
         )
         {
             _log.LogTrace($"ScannerUpcomingDeletion timer past due: {timer.IsPastDue}; next run: {timer.Schedule.GetNextOccurrence(DateTime.UtcNow)}");
-            var resourcesNearDeletion = await _scanner.ScanForExpiredResources(DateTimeOffset.UtcNow.AddDays(3));
+            var resourcesNearDeletion = await _scanner.ScanForExpiredResources(DateTime.UtcNow);
             // output to notification queue -->
             var resourcesToTag = resourcesNearDeletion.Select(x => new ResourceSearchResult(
                subscriptionId: x.SubscriptionId,
