@@ -5,10 +5,10 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-using Azure.Identity;
 using Azure.ResourceManager.Resources;
 
 using azman_v2.Model;
+using azman_v2.Auth;
 
 namespace azman_v2
 {

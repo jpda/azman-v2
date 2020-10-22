@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Extensions.Logging;
 
-namespace azman_v2
+namespace azman_v2.Auth
 {
     public class AzureManagedIdentityServiceTokenProvider : ITokenProvider
     {

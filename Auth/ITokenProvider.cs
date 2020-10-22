@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace azman_v2
+namespace azman_v2.Auth
 {
     public interface ITokenProvider
     {

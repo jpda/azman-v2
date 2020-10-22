@@ -3,7 +3,7 @@ using System.IO;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Azure.Services.AppAuthentication;
+using azman_v2.Auth;
 
 [assembly: FunctionsStartup(typeof(azman_v2.Startup))]
 

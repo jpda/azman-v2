@@ -17,6 +17,4 @@ namespace azman_v2.Model
         public string SubscriptionId { get; set; }
         public DateTime DateCreated { get; set; }
     }
-
-
 }

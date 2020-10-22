@@ -86,7 +86,7 @@ namespace azman_v2
 
         [FunctionName("ScannerUpcomingDeletion")]
         public async Task FindUpcoming(
-            [TimerTrigger("0 11 * * *")] TimerInfo timer,
+            [TimerTrigger("%FindUpcomingSchedule")] TimerInfo timer,
             [Queue("%ResourceGroupNotifyQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> outboundQueue
         )
         {
@@ -121,6 +121,7 @@ namespace azman_v2
             Binder binder
         )
         {
+            _log.LogTrace($"Exporting template for {request.ResourceId} in {request.SubscriptionId}");
             // get template from ARM
             var templateData = await _resourceManager.
                         ExportResourceGroupTemplateByName(request.SubscriptionId, request.ResourceId);
