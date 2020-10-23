@@ -126,5 +126,19 @@ namespace azman_v2
                                                      | project name, subscriptionId, id";
             return await QueryResourceGraph(expiredQuery);
         }
+
+        public async Task<IEnumerable<ResourceSearchResult>> FindSpecificResources(string expression)
+        { // https://docs.microsoft.com/en-us/azure/virtual-machines/states-lifecycle
+            var runningVmsQuery = $@"resources | where type == 'microsoft.compute/virtualmachines'
+                                    | project id, subscriptionId, resourceGroup, name, 
+                                    properties.extended.instanceView.powerState.displayStatus";
+            // todo: update the return types with more arbitrary data
+            return await QueryResourceGraph(runningVmsQuery);
+        }
+
+        // public async Task<IEnumerable<T>> FindSpecificResources<T>(string expression, Func<)
+        // {
+            
+        // }
     }
 }

@@ -130,6 +130,7 @@ namespace azman_v2
                     delayInSec = Convert.ToInt32(request.Headers.RetryAfter.Delta.Value.TotalSeconds);
                 }
                 await Task.Delay(delayInSec * 1000);
+                // todo: if location == null or empty, POST to export Uri
                 request = await _httpClient.GetAsync(request.Headers.Location ?? exportUri);
             }
 
@@ -142,11 +143,11 @@ namespace azman_v2
             // todo: tweak based on output and ease of re-deploy
             // var resourceManagerClient = new ResourcesManagementClient(subscriptionId, _tokenCredential);
             // var exportedTemplate = await resourceManagerClient.ResourceGroups.StartExportTemplateAsync(groupName,
-            // todo: this is required but read-only? hmm
-            //new Azure.ResourceManager.Resources.Models.ExportTemplateRequest() { Resources = new[] { "*" } });
+            // // todo: this is required but read-only? hmm
+            // new Azure.ResourceManager.Resources.Models.ExportTemplateRequest() { Resources = new[] { "*" } });
             // new Azure.ResourceManager.Resources.Models.ExportTemplateRequest() { });
             // if (exportedTemplate.HasValue) return (string)exportedTemplate.Value.Template; // todo: y tho?
-            //return string.Empty;
+            // return string.Empty;
         }
     }
 }

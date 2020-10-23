@@ -147,17 +147,21 @@ namespace azman_v2
 
             using var writer = await binder.BindAsync<TextWriter>(attributes).ConfigureAwait(false);
             writer.Write(templateData);
-            await _resourceManager.AddTags(request.ResourceId, request.SubscriptionId, new KeyValuePair<string, string>("exported", "true"));
+            await _resourceManager.AddTags(
+                request.ResourceId, request.SubscriptionId,
+                new KeyValuePair<string, string>("exported", "true")
+            );
         }
 
         [FunctionName("AlexaEndpoint")]
-        public async Task<IActionResult> AlexaEndpoint([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req)
+        public async Task<IActionResult> AlexaEndpoint(
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req)
         {
             _log.LogTrace($"Recieved alexa request");
             string json = await req.ReadAsStringAsync();
             _log.LogTrace($"request: {json}");
-
-            var input = JsonSerializer.Deserialize<SkillRequest>(json);
+            var input = Newtonsoft.Json.JsonConvert.DeserializeObject<SkillRequest>(json);
+            //var input = JsonSerializer.Deserialize<SkillRequest>(json);
             var requestType = input.GetRequestType();
 
             if (requestType == typeof(LaunchRequest))
@@ -174,17 +178,18 @@ namespace azman_v2
                 case "check_expiring":
                     {
                         var expiring = await _scanner.ScanForExpiredResources("now() + 3d");
-                        // foreach (var e in expiring)
-                        // {
-                        //     var resource = _resourceManager.GetTagValue<string>(e.SubscriptionId, e.ResourceId, "project", x => x, () => string.Empty);
-                        // }
                         var expiringNames = expiring.Select(x => x.ResourceId);
-                        var response = ResponseBuilder.Tell($"You have {expiring.Count()} resources expiring in the next three days: {string.Join(',', expiringNames)}");
+                        var response = ResponseBuilder.Tell($"You have {expiring.Count()} resources being nuked into orbit in the next three days: {string.Join(',', expiringNames)}. Why aren't these running in AWS?");
                         return new OkObjectResult(response);
                     }
                 case "whats_running":
                     {
+                        var vms = _scanner.
                         return new OkObjectResult(ResponseBuilder.Tell("Thraz man knows when thraz man knows. Trust the process"));
+                    }
+                case "delete_resource":
+                    {
+                        return new OkObjectResult(ResponseBuilder.Tell("Deleting your entire Azure subscription...J.K. Thraz man isn't ready to delete stuff yet.", null));
                     }
                 default:
                     {
