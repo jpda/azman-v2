@@ -11,6 +11,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using azman_v2.Model;
+using Alexa.NET.Request;
+using Alexa.NET.Request.Type;
+using Alexa.NET;
+using Alexa.NET.Response;
 
 namespace azman_v2
 {
@@ -144,6 +148,51 @@ namespace azman_v2
             using var writer = await binder.BindAsync<TextWriter>(attributes).ConfigureAwait(false);
             writer.Write(templateData);
             await _resourceManager.AddTags(request.ResourceId, request.SubscriptionId, new KeyValuePair<string, string>("exported", "true"));
+        }
+
+        [FunctionName("AlexaEndpoint")]
+        public async Task<IActionResult> AlexaEndpoint([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req)
+        {
+            _log.LogTrace($"Recieved alexa request");
+            string json = await req.ReadAsStringAsync();
+            _log.LogTrace($"request: {json}");
+
+            var input = JsonSerializer.Deserialize<SkillRequest>(json);
+            var requestType = input.GetRequestType();
+
+            if (requestType == typeof(LaunchRequest))
+            {
+                return new OkObjectResult(ResponseBuilder.Ask("THE THRAZ MAN COMES.", null));
+            }
+
+            var defaultResponse = ResponseBuilder.Ask("Do not anger thraz man with unclear instructions.", null);
+
+            if (!(input.Request is IntentRequest intentRequest)) return new OkObjectResult(defaultResponse);
+
+            switch (intentRequest.Intent.Name)
+            {
+                case "check_expiring":
+                    {
+                        var expiring = await _scanner.ScanForExpiredResources("now() + 3d");
+                        // foreach (var e in expiring)
+                        // {
+                        //     var resource = _resourceManager.GetTagValue<string>(e.SubscriptionId, e.ResourceId, "project", x => x, () => string.Empty);
+                        // }
+                        var expiringNames = expiring.Select(x => x.ResourceId);
+                        var response = ResponseBuilder.Tell($"You have {expiring.Count()} resources expiring in the next three days: {string.Join(',', expiringNames)}");
+                        return new OkObjectResult(response);
+                    }
+                case "whats_running":
+                    {
+                        return new OkObjectResult(ResponseBuilder.Tell("Thraz man knows when thraz man knows. Trust the process"));
+                    }
+                default:
+                    {
+                        return new OkObjectResult(defaultResponse);
+                    }
+            }
+
+            //return new OkObjectResult(defaultResponse);
         }
     }
 }
