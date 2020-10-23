@@ -124,15 +124,20 @@ namespace azman_v2
         {
             _log.LogTrace($"Exporting template for {request.ResourceId} in {request.SubscriptionId}");
             // get template from ARM
+            var previouslyExported = await _resourceManager.GetTagValue(request.SubscriptionId, request.ResourceId, "exported", x => bool.Parse(x), () => false);
+            _log.LogTrace($"Template for {request.ResourceId} in {request.SubscriptionId} has been exported previously: {previouslyExported}");
+            if (previouslyExported) return;
+
             var templateData = await _resourceManager.
                         ExportResourceGroupTemplateByName(request.SubscriptionId, request.ResourceId);
             if (string.IsNullOrWhiteSpace(templateData)) return;
 
+            var exportFilename = $"thrazman-export/{DateTime.UtcNow:yyyy-MM-dd}/{request.ResourceId}-{Guid.NewGuid().ToString().Substring(0, 8)}.json";
+            _log.LogTrace($"Got template data, writing to {exportFilename}");
             // connect up to blob storage
             var attributes = new Attribute[]
             {
-                new BlobAttribute(@$"thrazman-export/{DateTime.UtcNow:yyyy-MM-dd}/
-                                    {request.ResourceId}-{Guid.NewGuid().ToString().Substring(0,8)}.json"),
+                new BlobAttribute(exportFilename),
                 new StorageAccountAttribute("MainStorageConnection")
             };
 
