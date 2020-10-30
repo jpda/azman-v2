@@ -77,15 +77,34 @@ namespace azman_v2
             if (((dynamic)query.Data).rows is Newtonsoft.Json.Linq.JArray j)
             {
                 resources.AddRange(
-                    j.Select(x => new ResourceSearchResult()
+                    j.Select(x => new ResourceSearchResult(
+                        resourceId: x.ElementAt(0).ToString(),
+                        subscriptionId: x.ElementAt(1).ToString())));
+            }
+
+            return resources;
+        }
+
+        private async Task<IEnumerable<T>> QueryResourceGraph<T>(string queryText) where T : SearchResult, new()
+        {
+            var subscriptions = await FindAccessibleSubscriptions();
+            var token = await _tokenProvider.GetAccessTokenAsync(new[] { _managementAzureAdResourceId });
+            var graphClient = new ResourceGraphClient(new Microsoft.Rest.TokenCredentials(token.Token));
+            var query = await graphClient.ResourcesAsync(new QueryRequest(subscriptions.ToList(), queryText));
+
+            var resources = new List<T>();
+            // the ResourceGraphClient uses Newtonsoft under the hood
+            if (((dynamic)query.Data).rows is Newtonsoft.Json.Linq.JArray j)
+            {
+                var result = new T();
+                resources.AddRange(
+                    j.Select(x => new T()
                     {
-                        // I'm sure there is a better way here - looking at the columns property, for example, 
-                        // to find the position of the column in the row we're interested in - follows query order
-                        // so for now, 0 & 1
                         ResourceId = x.ElementAt(0).ToString(),
                         SubscriptionId = x.ElementAt(1).ToString()
                     }));
             }
+
 
             return resources;
         }
@@ -135,10 +154,5 @@ namespace azman_v2
             // todo: update the return types with more arbitrary data
             return await QueryResourceGraph(runningVmsQuery);
         }
-
-        // public async Task<IEnumerable<T>> FindSpecificResources<T>(string expression, Func<)
-        // {
-            
-        // }
     }
 }

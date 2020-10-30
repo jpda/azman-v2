@@ -10,5 +10,6 @@ namespace azman_v2
         Task<IEnumerable<ResourceSearchResult>> ScanForExpiredResources();
         Task<IEnumerable<ResourceSearchResult>> ScanForExpiredResources(DateTime expirationDate);
         Task<IEnumerable<ResourceSearchResult>> ScanForExpiredResources(string kustoDateExpression);
+        Task<IEnumerable<ResourceSearchResult>> FindSpecificResources(string searchExpression);
     }
 }

@@ -184,7 +184,7 @@ namespace azman_v2
                     }
                 case "whats_running":
                     {
-                        var vms = _scanner.
+                        
                         return new OkObjectResult(ResponseBuilder.Tell("Thraz man knows when thraz man knows. Trust the process"));
                     }
                 case "delete_resource":
