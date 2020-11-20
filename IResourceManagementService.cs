@@ -14,5 +14,7 @@ namespace azman_v2
         Task<string> GetRawTagValue(string subscriptionId, string resourceGroupName, string tagName);
         Task<T> GetTagValue<T>(string subscriptionId, string resourceGroupName, string tagName, Func<string, T> converter, Func<T> error);
         Task<string> ExportResourceGroupTemplateByName(string subscriptionId, string groupName);
+        Task<Azure.ResourceManager.Resources.Models.ResourceGroup> GetResourceGroup(string subscriptionId,
+            string resourceGroupName);
     }
 }

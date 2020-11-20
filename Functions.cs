@@ -23,11 +23,17 @@ namespace azman_v2
         private readonly IScanner _scanner;
         private readonly IResourceManagementService _resourceManager;
         private readonly ILogger<Functions> _log;
-        public Functions(IScanner scanner, IResourceManagementService manager, ILoggerFactory loggerFactory)
+        private readonly INotifier _notifier;
+        public Functions(IScanner scanner,
+            IResourceManagementService manager,
+            ILoggerFactory loggerFactory,
+            INotifier notifier
+        )
         {
             _scanner = scanner;
             _resourceManager = manager;
             _log = loggerFactory.CreateLogger<Functions>();
+            _notifier = notifier;
         }
 
         [FunctionName("OnResourceGroupCreate")]
@@ -86,7 +92,6 @@ namespace azman_v2
                 resourceId: x.ResourceId
             ));
             await outboundQueue.AddRangeAsync(resourcesToTag);
-
         }
 
         [FunctionName("ScannerUpcomingDeletion")]
@@ -103,6 +108,23 @@ namespace azman_v2
                resourceId: x.ResourceId
            ));
             await outboundQueue.AddRangeAsync(resourcesToTag);
+        }
+
+        [FunctionName("NotifyExpiration")]
+        public async Task Notify(
+            [QueueTrigger("%ResourceGroupNotifyQueueName%", Connection = "MainStorageConnection")]
+                 ResourceSearchResult expiringResource
+        )
+        {
+            // query for resource
+            var group = await _resourceManager.GetResourceGroup(expiringResource.SubscriptionId, expiringResource.ResourceId);
+            var expirationDate = group.Tags.FirstOrDefault(x => x.Key == "expires").Value;
+
+            // build message
+            await _notifier.Notify(new NotificationMessage()
+            {
+                Message = $"THRAZMAN HERE. {group.Name} IS EXPIRING ON {expirationDate}"
+            });
         }
 
         // todo: best candidate for durable functions
@@ -184,7 +206,7 @@ namespace azman_v2
                     }
                 case "whats_running":
                     {
-                        
+
                         return new OkObjectResult(ResponseBuilder.Tell("Thraz man knows when thraz man knows. Trust the process"));
                     }
                 case "delete_resource":

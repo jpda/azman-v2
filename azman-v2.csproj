@@ -1,13 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AzureFunctionsVersion>v3</AzureFunctionsVersion>
     <RootNamespace>azman_v2</RootNamespace>
     <Nullable>enable</Nullable>
+    <UserSecretsId>ac771042-2150-4ae7-babe-defe65311a33</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.DurableTask" Version="2.1.1" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="4.0.2" />
+    <!-- <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="5.0.0" /> -->
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.7" />
     <PackageReference Include="Azure.Identity" Version="1.2.3" />
     <PackageReference Include="Azure.ResourceManager.Resources" Version="1.0.0-preview.2" />
@@ -16,6 +18,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="4.0.0" />
     <PackageReference Include="Microsoft.Azure.Management.ResourceGraph" Version="2.0.0" />
     <PackageReference Include="Alexa.NET" Version="1.14.0" />
+    <PackageReference Include="Twilio" Version="5.50.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

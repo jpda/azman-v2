@@ -148,5 +148,13 @@ namespace azman_v2
             if (exportedTemplate.HasValue) return (string)exportedTemplate.Value.Template;
             return string.Empty;
         }
+
+        public async Task<Azure.ResourceManager.Resources.Models.ResourceGroup> GetResourceGroup(string subscriptionId,
+            string resourceGroupName)
+        {
+            var resourceManagerClient = new ResourcesManagementClient(subscriptionId, _tokenCredential);
+            var groupResponse = await resourceManagerClient.ResourceGroups.GetAsync(resourceGroupName);
+            return groupResponse.Value;
+        }
     }
 }

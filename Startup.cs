@@ -4,6 +4,8 @@ using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using azman_v2.Auth;
+using System.Reflection;
+using Twilio;
 
 [assembly: FunctionsStartup(typeof(azman_v2.Startup))]
 
@@ -19,6 +21,7 @@ namespace azman_v2
                 .AddJsonFile(Path.Combine(context.ApplicationRootPath, "appsettings.json"), optional: true, reloadOnChange: false)
                 .AddJsonFile(Path.Combine(context.ApplicationRootPath, $"appsettings.{context.EnvironmentName}.json"), optional: true, reloadOnChange: false)
                 //.AddAzureAppConfiguration(Environment.GetEnvironmentVariable("AZMAN-AAC-CONNECTION"), optional: true)
+                //.AddUserSecrets(Assembly.GetExecutingAssembly(), true)
                 .AddEnvironmentVariables();
         }
 
@@ -35,6 +38,7 @@ namespace azman_v2
             }
             builder.Services.AddSingleton<IResourceManagementService, AzureResourceManagementService>();
             builder.Services.AddSingleton<IScanner, Scanner>();
+            builder.Services.AddSingleton<INotifier, TwilioNotifier>();
         }
     }
 }
