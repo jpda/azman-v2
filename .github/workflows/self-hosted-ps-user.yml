@@ -1,5 +1,4 @@
-name: Self-hosted AzPs User MSI
-
+name: (MSI) AzPs user assigned
 on:
   [push]
 
@@ -23,9 +22,10 @@ jobs:
       uses: actions/checkout@master
 
     - name: 'Login via Azure CLI'
-      uses: jpda/login@v1.2
+      uses: jpda/login@v1.3
       with:
         enable-managed-identity: true
+        allow-no-subscriptions: true
         user-managed-identity-resource-id: '/subscriptions/e7048bdb-835c-440f-9304-aa4171382839/resourceGroups/service-me-p-github-actions-runner/providers/Microsoft.ManagedIdentity/userAssignedIdentities/user-managed-identity-for-test'
         enable-AzPsSession: true
    
