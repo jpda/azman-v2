@@ -34,8 +34,7 @@ namespace azman_v2
         }
 
         [FunctionName("OnResourceGroupCreate")]
-        public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
+        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
             [Queue("%ResourceGroupCreatedQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<TagSuiteModel> outboundQueue)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
@@ -112,7 +111,7 @@ namespace azman_v2
         {
             // query for resource
             var group = await _resourceManager.GetResourceGroup(request.SubscriptionId, request.ResourceId);
-            var expirationDate = group.Tags.FirstOrDefault(x => x.Key == "notified").Value;
+            var expirationDate = group.Tags.FirstOrDefault(x => x.Key == "expires").Value;
             var hasExpired = DateTime.TryParse(expirationDate, out var exp) && exp < DateTime.UtcNow;
 
             var previouslyNotified = await _resourceManager.GetTagValue(request.SubscriptionId, request.ResourceId, "notified", x => bool.Parse(x), () => false);
@@ -157,10 +156,7 @@ namespace azman_v2
         }
 
         [FunctionName("PersistResourceGroupToStorage")]
-        public async Task PersistResourceGroupToStorage(
-            [QueueTrigger("%ResourceGroupPersistQueueName%", Connection = "MainStorageConnection")] ResourceSearchResult request,
-            Binder binder
-        )
+        public async Task PersistResourceGroupToStorage([QueueTrigger("%ResourceGroupPersistQueueName%", Connection = "MainStorageConnection")] ResourceSearchResult request, Binder binder)
         {
             _log.LogTrace($"Exporting template for {request.ResourceId} in {request.SubscriptionId}");
             // get template from ARM
@@ -186,8 +182,7 @@ namespace azman_v2
         }
 
         [FunctionName("AlexaEndpoint")]
-        public async Task<IActionResult> AlexaEndpoint(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req)
+        public async Task<IActionResult> AlexaEndpoint([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req)
         {
             _log.LogTrace($"Recieved alexa request");
             string json = await req.ReadAsStringAsync();

@@ -77,18 +77,26 @@ namespace azman_v2
             var subscriptions = await FindAccessibleSubscriptions();
             var token = await _tokenProvider.GetAccessTokenAsync(new[] { _managementAzureAdResourceId });
             var graphClient = new ResourceGraphClient(new Microsoft.Rest.TokenCredentials(token.Token));
-            var query = await graphClient.ResourcesAsync(new QueryRequest(subscriptions.ToList(), queryText));
+
 
             var resources = new List<ResourceSearchResult>();
-            // the ResourceGraphClient uses Newtonsoft under the hood
-            if (((dynamic)query.Data).rows is Newtonsoft.Json.Linq.JArray j)
+            try
             {
-                resources.AddRange(
-                    j.Select(x => new ResourceSearchResult(
-                        resourceId: x.ElementAt(0).ToString(),
-                        subscriptionId: x.ElementAt(1).ToString())));
-            }
+                var query = await graphClient.ResourcesAsync(new QueryRequest(subscriptions.ToList(), queryText));
+                _log.LogInformation($"Resource graph response: {query.Data}");
 
+                if (((dynamic)query.Data).rows is Newtonsoft.Json.Linq.JArray j)
+                {
+                    resources.AddRange(
+                        j.Select(x => new ResourceSearchResult(
+                            resourceId: x.ElementAt(0).ToString(),
+                            subscriptionId: x.ElementAt(1).ToString())));
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, ex.Message);
+            }
             return resources;
         }
 
@@ -97,22 +105,27 @@ namespace azman_v2
             var subscriptions = await FindAccessibleSubscriptions();
             var token = await _tokenProvider.GetAccessTokenAsync(new[] { _managementAzureAdResourceId });
             var graphClient = new ResourceGraphClient(new Microsoft.Rest.TokenCredentials(token.Token));
-            var query = await graphClient.ResourcesAsync(new QueryRequest(subscriptions.ToList(), queryText));
-
             var resources = new List<T>();
-            // the ResourceGraphClient uses Newtonsoft under the hood
-            if (((dynamic)query.Data).rows is Newtonsoft.Json.Linq.JArray j)
+            try
             {
-                var result = new T();
-                resources.AddRange(
-                    j.Select(x => new T()
-                    {
-                        ResourceId = x.ElementAt(0).ToString(),
-                        SubscriptionId = x.ElementAt(1).ToString()
-                    }));
+                var query = await graphClient.ResourcesAsync(new QueryRequest(subscriptions.ToList(), queryText));
+
+                // the ResourceGraphClient uses Newtonsoft under the hood
+                if (((dynamic)query.Data).rows is Newtonsoft.Json.Linq.JArray j)
+                {
+                    var result = new T();
+                    resources.AddRange(
+                        j.Select(x => new T()
+                        {
+                            ResourceId = x.ElementAt(0).ToString(),
+                            SubscriptionId = x.ElementAt(1).ToString()
+                        }));
+                }
             }
-
-
+            catch (Exception ex)
+            {
+                _log.LogError(ex, ex.Message);
+            }
             return resources;
         }
 
