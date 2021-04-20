@@ -1,4 +1,4 @@
-name: deploy thrazman with service principal
+name: Deploy thrazman to azure
 
 on: [push]
 env:
@@ -14,7 +14,7 @@ jobs:
       uses: actions/checkout@master
 
     - name: 'Login via Azure CLI'
-      uses: jpda/login@v1.3
+      uses: azure/login@v1
       with:
         creds: ${{secrets.AZURE_CREDENTIALS}}
 
