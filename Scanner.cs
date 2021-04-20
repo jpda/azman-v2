@@ -9,33 +9,40 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Management.ResourceGraph;
 using Microsoft.Azure.Management.ResourceGraph.Models;
 using azman_v2.Auth;
+using Microsoft.Extensions.Options;
 
 namespace azman_v2
 {
+    public class ScannerOptions
+    {
+        public string DefaultSubscriptionId { get; set; }
+        public string ManagementEndpoint { get; set; } = "https://management.azure.com/";
+        public string ManagementResourceId { get; set; } = "https://management.azure.com/";
+    }
+
     public class Scanner : IScanner
     {
         private readonly ITokenProvider _tokenProvider;
         private readonly HttpClient _httpClient;
         private readonly ILogger<Scanner> _log;
-
-        // todo: configuration for national clouds, e.g., https://management.chinacloudapi.cn
-        private readonly string _managementEndpoint = "https://management.azure.com/";
-        private readonly string _managementAzureAdResourceId = "https://management.azure.com/";
-        // todo: configuration to allow/deny specific subscriptions
+        private readonly string _managementEndpoint;
+        private readonly string _managementAzureAdResourceId;
         private readonly List<string> _subscriptionIds;
+        private readonly ScannerOptions _opts;
 
-        public Scanner(ITokenProvider tokenProvider, IHttpClientFactory httpFactory, ILoggerFactory loggerFactory)
+        public Scanner(IOptions<ScannerOptions> opts, ITokenProvider tokenProvider, IHttpClientFactory httpFactory, ILoggerFactory loggerFactory)
         {
             _tokenProvider = tokenProvider;
             _httpClient = httpFactory.CreateClient();
             _log = loggerFactory.CreateLogger<Scanner>();
-            _subscriptionIds = new List<string>();
+            _opts = opts.Value;
+            _subscriptionIds = new List<string>() { _opts.DefaultSubscriptionId };
+            _managementAzureAdResourceId = _opts.ManagementResourceId;
+            _managementEndpoint = _opts.ManagementEndpoint;
         }
 
         private async Task<IEnumerable<string>> FindAccessibleSubscriptions(bool forceRefresh = false)
         {
-            // todo: hack for testing until configurable subscription list is available
-            _subscriptionIds.Add("e7048bdb-835c-440f-9304-aa4171382839");
             if (!forceRefresh || _subscriptionIds.Any())
             {
                 return _subscriptionIds;

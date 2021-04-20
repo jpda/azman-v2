@@ -1,57 +1,24 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Twilio;
-using Twilio.Rest.Api.V2010.Account;
 using Twilio.Types;
 
-public interface INotifier
+namespace azman_v2
 {
-    Task Notify(NotificationMessage message);
-    Task Notify(NotificationMessage message, NotificationChannel channel);
-}
-
-public class TwilioNotifier : INotifier
-{
-    private readonly ILogger<TwilioNotifier> _logger;
-    public TwilioNotifier(IConfiguration config, ILoggerFactory loggerFactory)
+    public interface INotifier
     {
-        _logger = loggerFactory.CreateLogger<TwilioNotifier>();
-        var twilioAccountSid = config["TwilioAccountSid"];
-        var twilioAccountAuthToken = config["TwilioAccountToken"];
-        TwilioClient.Init(twilioAccountSid, twilioAccountAuthToken);
+        Task Notify(NotificationMessage message);
+        Task Notify(NotificationMessage message, NotificationChannel channel);
     }
 
-    public async Task Notify(NotificationMessage message)
+    public class NotificationMessage
     {
-        try
-        {
-            var theMessage = await MessageResource.CreateAsync(
-                to: new PhoneNumber("+19802072561"),
-                from: new PhoneNumber("+18146629626"),
-                body: message.Message
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, ex.Message);
-        }
+        public string Message { get; set; }
+        public DateTime NotificationTime { get; set; }
     }
 
-    public Task Notify(NotificationMessage message, NotificationChannel channel)
+    public class NotificationChannel
     {
-        throw new NotImplementedException();
+        public string ChannelId { get; set; }
     }
-}
-
-public class NotificationMessage
-{
-    public string Message { get; set; }
-    public DateTime NotificationTime { get; set; }
-}
-
-public class NotificationChannel
-{
-    public string ChannelId { get; set; }
 }

@@ -114,33 +114,7 @@ namespace azman_v2
 
         public async Task<string> ExportResourceGroupTemplateByName(string subscriptionId, string groupName)
         {
-            // var token = await _tokenProvider.GetAccessTokenAsync(new[] { "https://management.azure.com/" });
-            // _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.Token);
-            // var exportUri = new Uri($"https://management.azure.com/subscriptions/{subscriptionId}/resourcegroups/{groupName}/exportTemplate?api-version=2020-06-01");
-            // var body = new StringContent("{'resources':[ '*' ]}", System.Text.Encoding.UTF8, "application/json");
-
-            // var request = await _httpClient.PostAsync(exportUri, body);
-            // if (!request.IsSuccessStatusCode) return string.Empty;
-
-            // while (request.StatusCode == System.Net.HttpStatusCode.Accepted)
-            // {
-            //     var delayInSec = 15;
-            //     if (request.Headers.RetryAfter.Delta != null)
-            //     {
-            //         delayInSec = Convert.ToInt32(request.Headers.RetryAfter.Delta.Value.TotalSeconds);
-            //     }
-            //     await Task.Delay(delayInSec * 1000);
-            //     // todo: if location == null or empty, POST to export Uri
-            //     request = await _httpClient.GetAsync(request.Headers.Location ?? exportUri);
-            // }
-
-            // if (!request.IsSuccessStatusCode) return string.Empty;
-
-            // var templateData = await request.Content.ReadAsStringAsync();
-            // return templateData;
-
             // POST https://management.azure.com/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/exportTemplate?api-version=2020-06-01
-            // todo: tweak based on output and ease of re-deploy
             var resourceManagerClient = new ResourcesManagementClient(subscriptionId, _tokenCredential);
             var resourceTypesToExport = new Azure.ResourceManager.Resources.Models.ExportTemplateRequest();
             resourceTypesToExport.Resources.Add("*");

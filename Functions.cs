@@ -15,6 +15,7 @@ using Alexa.NET.Request;
 using Alexa.NET.Request.Type;
 using Alexa.NET;
 using Alexa.NET.Response;
+using System.Text;
 
 namespace azman_v2
 {
@@ -24,11 +25,7 @@ namespace azman_v2
         private readonly IResourceManagementService _resourceManager;
         private readonly ILogger<Functions> _log;
         private readonly INotifier _notifier;
-        public Functions(IScanner scanner,
-            IResourceManagementService manager,
-            ILoggerFactory loggerFactory,
-            INotifier notifier
-        )
+        public Functions(IScanner scanner, IResourceManagementService manager, ILoggerFactory loggerFactory, INotifier notifier)
         {
             _scanner = scanner;
             _resourceManager = manager;
@@ -111,34 +108,51 @@ namespace azman_v2
         }
 
         [FunctionName("NotifyExpiration")]
-        public async Task Notify(
-            [QueueTrigger("%ResourceGroupNotifyQueueName%", Connection = "MainStorageConnection")]
-                 ResourceSearchResult expiringResource
-        )
+        public async Task Notify([QueueTrigger("%ResourceGroupNotifyQueueName%", Connection = "MainStorageConnection")] ResourceSearchResult request)
         {
             // query for resource
-            var group = await _resourceManager.GetResourceGroup(expiringResource.SubscriptionId, expiringResource.ResourceId);
+            var group = await _resourceManager.GetResourceGroup(request.SubscriptionId, request.ResourceId);
             var expirationDate = group.Tags.FirstOrDefault(x => x.Key == "expires").Value;
+            var hasExpired = DateTime.TryParse(expirationDate, out var exp) && exp < DateTime.UtcNow;
+
+            var previouslyNotified = await _resourceManager.GetTagValue(request.SubscriptionId, request.ResourceId, "notified", x => bool.Parse(x), () => false);
+            _log.LogTrace($"{request.ResourceId} in {request.SubscriptionId} has been notified of impending deletion previously: {previouslyNotified}");
+            if (previouslyNotified && !hasExpired) return;
+
+            var message = new StringBuilder();
+            message.Append("THRAZMAN HERE. ");
+            message.Append(group.Name);
+            if (hasExpired)
+            {
+                message.Append($" expired on {exp.ToShortDateString()} and will be deleted shortly.");
+            }
+            else
+            {
+                message.Append($" will expire on {exp.ToShortDateString()}. Extend the date before then to keep the resources.");
+            }
 
             // build message
             await _notifier.Notify(new NotificationMessage()
             {
-                Message = $"THRAZMAN HERE. {group.Name} IS EXPIRING ON {expirationDate}"
+                Message = message.ToString()
             });
+
+            // prevent duplicates
+            await _resourceManager.AddTags(request.ResourceId, request.SubscriptionId, new KeyValuePair<string, string>("notified", "true"));
         }
 
         // todo: best candidate for durable functions
         [FunctionName("ResourceGroupExpired")]
         public async Task ResourceGroupExpired(
             [QueueTrigger("%ResourceGroupExpiredQueueName%", Connection = "MainStorageConnection")] ResourceSearchResult request,
-            [Queue("%ResourceGroupPersistQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> persistQueue
+            [Queue("%ResourceGroupPersistQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> persistQueue,
+            [Queue("%ResourceGroupNotifyQueueName%", Connection = "MainStorageConnection")] IAsyncCollector<ResourceSearchResult> notifyQueue
         ) // at this point, the deletion is committed and will happen
         {
             // notify deletion --> this
-
+            await notifyQueue.AddAsync(request);
             // persist resource group template to storage --> that
             await persistQueue.AddAsync(request);
-
             // queue up for deletion --> don't do this until this and that are done
         }
 
@@ -154,13 +168,12 @@ namespace azman_v2
             _log.LogTrace($"Template for {request.ResourceId} in {request.SubscriptionId} has been exported previously: {previouslyExported}");
             if (previouslyExported) return;
 
-            var templateData = await _resourceManager.
-                        ExportResourceGroupTemplateByName(request.SubscriptionId, request.ResourceId);
+            var templateData = await _resourceManager.ExportResourceGroupTemplateByName(request.SubscriptionId, request.ResourceId);
             if (string.IsNullOrWhiteSpace(templateData)) return;
 
             var exportFilename = $"thrazman-export/{DateTime.UtcNow:yyyy-MM-dd}/{request.ResourceId}-{Guid.NewGuid().ToString().Substring(0, 8)}.json";
             _log.LogTrace($"Got template data, writing to {exportFilename}");
-            // connect up to blob storage
+
             var attributes = new Attribute[]
             {
                 new BlobAttribute(exportFilename),
@@ -169,10 +182,7 @@ namespace azman_v2
 
             using var writer = await binder.BindAsync<TextWriter>(attributes).ConfigureAwait(false);
             writer.Write(templateData);
-            await _resourceManager.AddTags(
-                request.ResourceId, request.SubscriptionId,
-                new KeyValuePair<string, string>("exported", "true")
-            );
+            await _resourceManager.AddTags(request.ResourceId, request.SubscriptionId, new KeyValuePair<string, string>("exported", "true"));
         }
 
         [FunctionName("AlexaEndpoint")]
