@@ -37,7 +37,7 @@ namespace azman_v2
             builder.Services.AddOptions<ScannerOptions>()
             .Configure<IConfiguration>((opts, config) =>
             {
-                config.GetSection("Twilio").Bind(opts);
+                config.GetSection("Scanner").Bind(opts);
             });
             builder.Services.AddSingleton<IScanner, Scanner>();
             builder.Services.AddOptions<TwilioOptions>()
