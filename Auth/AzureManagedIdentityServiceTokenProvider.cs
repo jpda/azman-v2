@@ -39,25 +39,26 @@ namespace azman_v2.Auth
     public class AzureIdentityTokenProvider : ITokenProvider
     {
         private readonly TokenCredential _cred;
+        private readonly ILogger<AzureIdentityTokenProvider> _log;
 
-        public AzureIdentityTokenProvider()
-        {
-            _cred = new ManagedIdentityCredential();
-        }
+        public AzureIdentityTokenProvider(ILoggerFactory loggerFactory) : this(loggerFactory, new ManagedIdentityCredential()) { }
 
-        public AzureIdentityTokenProvider(TokenCredential cred)
+        public AzureIdentityTokenProvider(ILoggerFactory loggerFactory, TokenCredential cred)
         {
+            _log = loggerFactory.CreateLogger<AzureIdentityTokenProvider>();
             _cred = cred;
         }
 
         public AccessTokenResponse GetAccessToken(string[] scopes, bool forceRefresh = false)
         {
+            _log.LogInformation($"Getting token via {_cred.GetType()} for {string.Join(',', scopes)}");
             var b = _cred.GetToken(new Azure.Core.TokenRequestContext(scopes), CancellationToken.None);
             var resource = ScopeUtil.GetResourceFromScope(scopes);
             return new AccessTokenResponse(resource, b.Token, b.ExpiresOn);
         }
         public async Task<AccessTokenResponse> GetAccessTokenAsync(string[] scopes, bool forceRefresh = false)
         {
+            _log.LogInformation($"Getting token via {_cred.GetType()} for {string.Join(',', scopes)}");
             var b = await _cred.GetTokenAsync(new Azure.Core.TokenRequestContext(scopes), CancellationToken.None);
             var resource = ScopeUtil.GetResourceFromScope(scopes);
             return new AccessTokenResponse(resource, b.Token, b.ExpiresOn);
