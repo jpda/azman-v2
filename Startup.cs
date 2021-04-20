@@ -30,15 +30,8 @@ namespace azman_v2
         public override void Configure(IFunctionsHostBuilder builder)
         {
             builder.Services.AddHttpClient();
-            if (builder.GetContext().EnvironmentName == "Development")
-            {
-                builder.Services.AddSingleton<ITokenProvider, AzureCliTokenProvider>();
-            }
-            else
-            {
-                builder.Services.AddSingleton<TokenCredential, ManagedIdentityCredential>();
-                builder.Services.AddSingleton<ITokenProvider, AzureIdentityTokenProvider>();
-            }
+            builder.Services.AddSingleton<TokenCredential, ManagedIdentityCredential>();
+            builder.Services.AddSingleton<ITokenProvider, AzureIdentityTokenProvider>();
             builder.Services.AddSingleton<IResourceManagementService, AzureResourceManagementService>();
             builder.Services.AddSingleton<IScanner, Scanner>();
             builder.Services.AddSingleton<INotifier, TwilioNotifier>();
