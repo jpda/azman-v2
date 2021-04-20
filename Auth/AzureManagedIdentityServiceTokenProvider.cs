@@ -2,6 +2,9 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Extensions.Logging;
+using Azure.Identity;
+using Azure.Core;
+using System.Threading;
 
 namespace azman_v2.Auth
 {
@@ -30,6 +33,34 @@ namespace azman_v2.Auth
             var resource = ScopeUtil.GetResourceFromScope(scopes);
             _log.LogTrace($"Fetching access token via MSI for {resource} ({string.Join(',', scopes)}); forcedRefresh: {forceRefresh}");
             return new AccessTokenResponse(resource, await _tokenProvider.GetAccessTokenAsync(resource, forceRefresh), DateTimeOffset.UtcNow.AddHours(1));
+        }
+    }
+
+    public class AzureIdentityTokenProvider : ITokenProvider
+    {
+        private readonly TokenCredential _cred;
+
+        public AzureIdentityTokenProvider()
+        {
+            _cred = new ManagedIdentityCredential();
+        }
+
+        public AzureIdentityTokenProvider(TokenCredential cred)
+        {
+            _cred = cred;
+        }
+
+        public AccessTokenResponse GetAccessToken(string[] scopes, bool forceRefresh = false)
+        {
+            var b = _cred.GetToken(new Azure.Core.TokenRequestContext(scopes), CancellationToken.None);
+            var resource = ScopeUtil.GetResourceFromScope(scopes);
+            return new AccessTokenResponse(resource, b.Token, b.ExpiresOn);
+        }
+        public async Task<AccessTokenResponse> GetAccessTokenAsync(string[] scopes, bool forceRefresh = false)
+        {
+            var b = await _cred.GetTokenAsync(new Azure.Core.TokenRequestContext(scopes), CancellationToken.None);
+            var resource = ScopeUtil.GetResourceFromScope(scopes);
+            return new AccessTokenResponse(resource, b.Token, b.ExpiresOn);
         }
     }
 }

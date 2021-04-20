@@ -6,6 +6,8 @@ using Microsoft.Extensions.Configuration;
 using azman_v2.Auth;
 using System.Reflection;
 using Twilio;
+using Azure.Identity;
+using Azure.Core;
 
 [assembly: FunctionsStartup(typeof(azman_v2.Startup))]
 
@@ -34,7 +36,8 @@ namespace azman_v2
             }
             else
             {
-                builder.Services.AddSingleton<ITokenProvider, AzureManagedIdentityServiceTokenProvider>();
+                builder.Services.AddSingleton<TokenCredential, ManagedIdentityCredential>();
+                builder.Services.AddSingleton<ITokenProvider, AzureIdentityTokenProvider>();
             }
             builder.Services.AddSingleton<IResourceManagementService, AzureResourceManagementService>();
             builder.Services.AddSingleton<IScanner, Scanner>();
