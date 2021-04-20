@@ -112,7 +112,7 @@ namespace azman_v2
         {
             // query for resource
             var group = await _resourceManager.GetResourceGroup(request.SubscriptionId, request.ResourceId);
-            var expirationDate = group.Tags.FirstOrDefault(x => x.Key == "expires").Value;
+            var expirationDate = group.Tags.FirstOrDefault(x => x.Key == "notified").Value;
             var hasExpired = DateTime.TryParse(expirationDate, out var exp) && exp < DateTime.UtcNow;
 
             var previouslyNotified = await _resourceManager.GetTagValue(request.SubscriptionId, request.ResourceId, "notified", x => bool.Parse(x), () => false);
