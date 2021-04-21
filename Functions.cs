@@ -116,7 +116,7 @@ namespace azman_v2
 
             var previouslyNotified = await _resourceManager.GetTagValue(request.SubscriptionId, request.ResourceId, "notified", x => bool.Parse(x), () => false);
             _log.LogTrace($"{request.ResourceId} in {request.SubscriptionId} has been notified of impending deletion previously: {previouslyNotified}");
-            if (previouslyNotified && !hasExpired) return;
+            if (previouslyNotified) return;
 
             var message = new StringBuilder();
             message.Append("THRAZMAN HERE. ");
